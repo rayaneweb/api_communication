@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 
 class CompteCreation(BaseModel):
@@ -21,3 +22,13 @@ class LoginRequete(BaseModel):
 class TokenReponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class MessageReponse(BaseModel):
+    id: int
+    expediteur_id: int
+    destinataire_id: int
+    contenu: str
+    date_envoi: datetime
+
+    model_config = {"from_attributes": True}

@@ -11,6 +11,7 @@ from security import (
     creer_token,
     decoder_token,
 )
+from sqlalchemy import or_, and_
 
 Base.metadata.create_all(bind=engine)
 
@@ -87,3 +88,31 @@ def lister_utilisateurs(
     db: Session = Depends(get_db),
 ):
     return db.query(models.Utilisateur).filter(models.Utilisateur.id != moi.id).all()
+
+
+@app.get("/api/messages/{utilisateur_id}", response_model=list[schemas.MessageReponse])
+def historique(
+    utilisateur_id: int,
+    moi: models.Utilisateur = Depends(utilisateur_courant),
+    db: Session = Depends(get_db),
+):
+    if not db.get(models.Utilisateur, utilisateur_id):
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    return (
+        db.query(models.Message)
+        .filter(
+            or_(
+                and_(
+                    models.Message.expediteur_id == moi.id,
+                    models.Message.destinataire_id == utilisateur_id,
+                ),
+                and_(
+                    models.Message.expediteur_id == utilisateur_id,
+                    models.Message.destinataire_id == moi.id,
+                ),
+            )
+        )
+        .order_by(models.Message.date_envoi)
+        .all()
+    )
