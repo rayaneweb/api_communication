@@ -12,6 +12,8 @@ from security import (
     decoder_token,
 )
 from sqlalchemy import or_, and_
+from fastapi import WebSocket, WebSocketDisconnect, Query
+from ws_manager import gestionnaire
 
 Base.metadata.create_all(bind=engine)
 
@@ -116,3 +118,56 @@ def historique(
         .order_by(models.Message.date_envoi)
         .all()
     )
+
+
+@app.websocket("/ws/messages")
+async def ws_messages(websocket: WebSocket, token: str = Query(...)):
+    db = SessionLocal()
+    try:
+        try:
+            user_id = decoder_token(token)
+        except jwt.PyJWTError:
+            await websocket.close(code=1008)
+            return
+        moi = db.get(models.Utilisateur, user_id)
+        if not moi:
+            await websocket.close(code=1008)
+            return
+
+        await gestionnaire.connecter(moi.id, websocket)
+        try:
+            while True:
+                data = await websocket.receive_json()
+                dest_id = data.get("destinataire_id")
+                contenu = data.get("contenu")
+
+                if (
+                    not isinstance(dest_id, int)
+                    or not contenu
+                    or not db.get(models.Utilisateur, dest_id)
+                ):
+                    await websocket.send_json({"erreur": "Message invalide"})
+                    continue
+
+                msg = models.Message(
+                    expediteur_id=moi.id, destinataire_id=dest_id, contenu=contenu
+                )
+                db.add(msg)
+                db.commit()
+                db.refresh(msg)
+
+                payload = {
+                    "id": msg.id,
+                    "expediteur_id": msg.expediteur_id,
+                    "destinataire_id": msg.destinataire_id,
+                    "contenu": msg.contenu,
+                    "date_envoi": msg.date_envoi.isoformat(),
+                }
+                await gestionnaire.envoyer(dest_id, payload)
+                await websocket.send_json(payload)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            gestionnaire.deconnecter(moi.id)
+    finally:
+        db.close()
