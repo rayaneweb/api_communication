@@ -1,0 +1,52 @@
+
+# Environnement virtuel Python
+venv/
+.venv/
+env/
+
+# Fichiers Python générés
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Variables d'environnement et secrets
+.env
+.env.*
+!.env.example
+
+# Fichiers de configuration locaux
+*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Tests et couverture
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Système
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+
+
+# Fichiers temporaires
+*.tmp
+*.bak
+
+# Certificats et clés privées
+*.pem
+*.key
+
+# Sauvegardes de bases de données
+*.sql
+*.dump
+*.backup
+
+*__pycache__
